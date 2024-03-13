@@ -1,0 +1,15 @@
+.light {
+  height : 100%
+}
+
+.dark {
+  height : 100%
+}
+
+.dark .blocklyToolboxDiv {
+  background-color: #272727
+}
+
+.dark .blocklySvg {
+  background-color: #121212;
+}
