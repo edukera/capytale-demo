@@ -2,10 +2,13 @@ import { CssBaseline, Grid } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import React, { useState } from 'react';
 
-import Blockly from './components/Blockly';
+import BlocklyPanel from './components/Blockly';
 //import CodeAnalysis from './components/CodeAnalysis';
 import { CodeEditor } from './components/CodeEditor';
 import { Header } from './components/Top';
+
+import ConfigFiles from "./components/toolbox/content";
+
 
 const initialCode = `def verifier_et_afficher(nombres):
   for nombre in nombres:
@@ -40,6 +43,8 @@ const darkTheme = createTheme({
 
 const App = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [blockJon, setBlockJson] = useState<any>(ConfigFiles.INITIAL_JSON)
+  const [workspace, setWorkspace] = useState<any>(null)
   const [code, setCode] = useState<string>(initialCode)
 
   const toggleTheme = () => {
@@ -52,10 +57,10 @@ const App = () => {
       <Header theme={theme} toggleTheme={toggleTheme} />
       <Grid container>
         <Grid item xs={12} md={6}>
-            <Blockly theme={theme}/>
+            <BlocklyPanel theme={theme} initialJson={blockJon} setWorkspace={setWorkspace}/>
         </Grid>
         <Grid item xs={12} md={6}>
-            <CodeEditor code={initialCode} theme={theme} setCode={setCode}/>
+            <CodeEditor code={initialCode} theme={theme} setCode={setCode} workspace={workspace}/>
         </Grid>
       </Grid>
     </ThemeProvider>

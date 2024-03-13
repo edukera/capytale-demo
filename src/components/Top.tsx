@@ -7,6 +7,9 @@ export type HeaderProps = {
 };
 
 export const Header = ({ theme , toggleTheme } : HeaderProps) => {
+  const handleChange = () => {
+    toggleTheme();
+  }
   return (
     <AppBar position="static">
       <Toolbar>
@@ -15,7 +18,7 @@ export const Header = ({ theme , toggleTheme } : HeaderProps) => {
         </Typography>
         <Switch
           checked={theme === 'dark'}
-          onChange={toggleTheme}
+          onChange={handleChange}
           name="themeSwitch"
           inputProps={{ 'aria-label': 'toggle theme' }}
         />
