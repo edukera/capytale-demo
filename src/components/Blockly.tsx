@@ -1,6 +1,6 @@
 import React from 'react'
 import Blockly from "blockly";
-import { BlocklyWorkspace, useBlocklyWorkspace } from "react-blockly";
+import { BlocklyWorkspace } from "react-blockly";
 
 import ConfigFiles from "./toolbox/content";
 

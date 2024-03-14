@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
 import { TreeCursor } from '@lezer/common';
 import { parser as PythonParser } from '@lezer/python';
 
-import TextField from '@mui/material/TextField';
-
+/* ***************************************************************************
+* Lezer AST to local simple AST
+******************************************************************************/
 interface ASTNode {
   type: string;
   children?: ASTNode[];
   value : string
-}
-
-type CodeAnalysisProps = {
-  code : string
 }
 
 export const parseInput = (code : string) : string => {
@@ -40,6 +36,10 @@ const astToJSON = (code : string, cursor: TreeCursor): ASTNode => {
 
   return result;
 };
+
+/* ***************************************************************************
+* AST to Blockly
+******************************************************************************/
 
 type BlocklyBlock = any; // Utilisez un type approprié pour les blocs Blockly.
 
@@ -200,28 +200,3 @@ export function pythonCodeToBlockly(code : string) : BlocklyBlock {
     return blocks.at(0)
   }
 }
-
-const CodeAnalysis = ({ code } : CodeAnalysisProps) => {
-  const [output, setOutput] = useState('');
-
-  return (
-    <div>
-      <h1>Application React avec Parser Lezer pour Python</h1>
-      <button onClick={() => parseInput(code)}>Analyser</button>
-      <div>
-        <h2>Résultat de l'analyse :</h2>
-        <TextField
-          fullWidth
-          multiline
-          variant="outlined"
-          value={output}
-          InputProps={{
-            readOnly: true,
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default CodeAnalysis;

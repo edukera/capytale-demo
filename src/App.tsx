@@ -45,8 +45,6 @@ const App = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [blockJon, setBlockJson] = useState<any>(ConfigFiles.INITIAL_JSON)
   const [workspace, setWorkspace] = useState<any>(null)
-  const [code, setCode] = useState<string>(initialCode)
-
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   };
