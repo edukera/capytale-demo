@@ -69,7 +69,7 @@ const foldChilren = (chilren : ASTNode[] | undefined, var_id : number) : BlockFo
 const foldChildrenAsNext = (children : BlocklyBlock[] | undefined) : BlocklyBlock => {
   if (children === undefined) throw new Error("No Children Node")
   return children.reduceRight((acc, node) => {
-    return { ...node, next : acc }
+    return { ...node, next : { block : acc } }
   })
 }
 
@@ -98,7 +98,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
       return [ [{
         blocks: {
           languageVersion: 0,
-          blocks: foldChildrenAsNext(blocks.filter((b: any) => { return b.length > 0 })),
+          blocks: [ foldChildrenAsNext(blocks.filter((b: any) => { return b.length > 0 }).flat()) ],
         },
         variables: vars.map(v => {
           return  {
@@ -154,7 +154,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
         type: "text",
         id: "nid_" + id,
         fields: {
-          TEXT: node.value
+          TEXT: node.value.replace(/^"|"$/g, '')
         }
       }], [], id + 1]
     }
@@ -166,7 +166,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
       const name = node.children?.at(0)?.value
       if (name === undefined) throw new Error("Invalid call expression")
       if (name === 'print') {
-        const  [ blocks, vars, new_id ] = foldChilren(node.children?.filter(node => {
+        const  [ blocks, vars, new_id ] = foldChilren(node.children?.at(1)?.children?.filter(node => {
           return !['(', ',', ')'].includes(node.type)
         }), id)
         return [ [{
@@ -174,7 +174,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
           id: "nid_" + new_id,
           inputs: {
             TEXT: {
-              shadow: blocks.at(0)
+              shadow: blocks.at(0).at(0)
             }
           }
         }], vars, new_id + 1]

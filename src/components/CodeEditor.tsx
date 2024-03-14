@@ -3,7 +3,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import React from 'react'
 import Blockly from "blockly"
 
-import { pythonCodeToBlockly } from './CodeAnalysis';
+import { pythonCodeToBlockly } from '../python2Blockly';
 
 type CodeEditorProps = {
   code : string,
