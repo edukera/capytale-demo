@@ -43,8 +43,11 @@ const astToJSON = (code : string, cursor: TreeCursor): ASTNode => {
 
 type BlocklyBlock = any; // Utilisez un type approprié pour les blocs Blockly.
 
-type BlockFold = [ BlocklyBlock[], [ string, number ][], number ]
-const empty = (id : number) : BlockFold => [[], [], id]
+type Vars = [ string, number ][]
+
+type BlockFold = [ BlocklyBlock[], Vars, number ]
+
+const empty = (vars : Vars, id : number) : BlockFold => [[], vars, id]
 
 /**
  * Folds Lezer AST children (list of nodes)
@@ -52,12 +55,12 @@ const empty = (id : number) : BlockFold => [[], [], id]
  * @param var_id
  * @returns list of blocks, list of vars, new identifier
  */
-const foldChilren = (chilren : ASTNode[] | undefined, var_id : number) : BlockFold => {
+const foldChildren = (chilren : ASTNode[] | undefined, vars : Vars, id : number) : BlockFold => {
   if (chilren === undefined) throw new Error("No Children Node")
   return chilren.reduce((acc, node) => {
-    const [block, vars, new_id] = mapNodeToBlockly(node, acc[2])
-    return [ [ ...acc[0], block ], acc[1].concat(vars), new_id ]
-  }, empty(var_id))
+    const [block, new_vars, new_id] = mapNodeToBlockly(node, acc[1], acc[2])
+    return [ [ ...acc[0], block ], new_vars, new_id ]
+  }, empty(vars, id))
 }
 
 /**
@@ -88,30 +91,30 @@ const foldChildrenAsMember = (root : BlocklyBlock, children : BlocklyBlock[] | u
   }, [root, 0])[0]
 }
 
-function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
+function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
 
   switch (node.type) {
     case "Script": {
       // Root node
       if (node.children === undefined) throw new Error("Invalid script")
-      const [ blocks, vars, new_id ] = foldChilren(node.children, id)
+      const [ blocks, new_vars, new_id ] = foldChildren(node.children, vars, id)
       return [ [{
         blocks: {
           languageVersion: 0,
           blocks: [ foldChildrenAsNext(blocks.filter((b: any) => { return b.length > 0 }).flat()) ],
         },
-        variables: vars.map(v => {
+        variables: new_vars.map(v => {
           return  {
             name: v[0],
             id: "nid_" + v[1]
           }
         }),
-      }], vars, new_id ];
+      }], new_vars, new_id ];
     }
     case "AssignStatement": {
       const name = node.children?.at(0)?.value
       if (name === undefined) throw new Error("Invalid Assign")
-      const [ blocks, vars, new_id ] = foldChilren(node.children?.slice(2), id)
+      const [ blocks, new_vars, new_id ] = foldChildren(node.children?.slice(2), vars, id)
       return [ [{
         type: "variables_set",
         id: "nid_" + new_id,
@@ -125,12 +128,12 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
             block: blocks[0][0]
           }
         }
-      }], [ ...vars, [name, new_id + 1] ], new_id + 2 ] // a variable has been created
+      }], new_vars.concat([[name, new_id + 1]]), new_id + 2 ] // a variable has been created
     }
     case "ArrayExpression": {
-      const  [ blocks, vars, new_id ] = foldChilren(node.children?.filter(node => {
+      const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.filter(node => {
         return !['[', ',', ']'].includes(node.type)
-      }), id)
+      }), vars, id)
       return [ [{
         type: "lists_create_with",
         id: "nid_" + new_id,
@@ -138,7 +141,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
           itemCount: blocks.length
         },
         inputs: foldChildrenAsMember({}, blocks.flat().map((b : any) => { return { block: b }}), "ADD")
-      }], vars, new_id + 1]
+      }], new_vars, new_id + 1]
     }
     case "Number": {
       return [ [{
@@ -147,7 +150,7 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
         fields: {
           NUM: Number.parseInt(node.value)
         }
-      }], [], id + 1]
+      }], vars, id + 1]
     }
     case "String": {
       return [ [{
@@ -156,19 +159,19 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
         fields: {
           TEXT: node.value.replace(/^"|"$/g, '')
         }
-      }], [], id + 1]
+      }], vars, id + 1]
     }
     case "ExpressionStatement": {
       if (node.children?.at(0) === undefined) throw new Error("Invalid Expression")
-      return mapNodeToBlockly(node.children[0], id)
+      return mapNodeToBlockly(node.children[0], vars, id)
     }
     case "CallExpression": {
       const name = node.children?.at(0)?.value
       if (name === undefined) throw new Error("Invalid call expression")
       if (name === 'print') {
-        const  [ blocks, vars, new_id ] = foldChilren(node.children?.at(1)?.children?.filter(node => {
+        const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.at(1)?.children?.filter(node => {
           return !['(', ',', ')'].includes(node.type)
-        }), id)
+        }), vars, id)
         return [ [{
           type: "text_print",
           id: "nid_" + new_id,
@@ -177,17 +180,71 @@ function mapNodeToBlockly(node: ASTNode, id : number): BlockFold {
               shadow: blocks.at(0).at(0)
             }
           }
-        }], vars, new_id + 1]
+        }], new_vars, new_id + 1]
       } else {
         console.warn(`CallExpression non géré`);
-        return empty(id);
+        return empty(vars, id);
       }
+    }
+    case "ForStatement": {
+      if (node.children?.at(0)?.type === 'for' && node.children?.at(2)?.type === 'in') {
+        // create new loop var
+        const loop_var = node.children?.at(1)?.value
+        if (loop_var === undefined) throw new Error("Invalid for in statement")
+        const loop_var_id = "nid_" + id
+        const new_vars = vars.concat([[ loop_var, id ]])
+        // fold list variable (index 3)
+        const list_variable_node = node.children?.at(3)
+        if (list_variable_node === undefined) throw new Error("Invalid for in statement")
+        const [ list_var_block, new_vars2, new_id ] = foldChildren([list_variable_node], new_vars, id + 2)
+        // fold children
+        const [ blocks, new_vars3, new_id2 ] = foldChildren(node.children.at(4)?.children, new_vars2, new_id)
+        return [ [{
+          type: "controls_forEach",
+          id: "nid_" + (id + 1),
+          fields: {
+            "VAR": {
+              "id": loop_var_id
+            }
+          },
+          inputs: {
+            LIST: {
+              block: list_var_block[0][0]
+            },
+            DO: {
+              block: foldChildrenAsNext(blocks.flat())
+            }
+          },
+        }], new_vars3, new_id2 + 1]
+      } else {
+        console.warn(`ForStatement non géré`);
+        return empty(vars, id);
+      }
+
+    }
+    case "VariableName" : {
+      const var_name = node.value
+      // search id in vars
+      const var_id = vars.reduce((acc, v) => {
+        return (v[0] === var_name) ? v[1] : acc
+      }, -1)
+      if (var_id === -1) {
+        return empty(vars, id);
+      } else return [ [{
+        type: "variables_get",
+        id: "nid_" + id,
+        fields: {
+          VAR: {
+            id: "nid_" + var_id
+          }
+        }
+      }], vars, id + 1 ]
     }
     // Ajoutez des cas pour les autres types de nœuds...
 
     default:
       console.warn(`Type de nœud non géré: ${node.type}`);
-      return empty(id); // Retournez un objet vide ou lancez une erreur selon votre besoin
+      return empty(vars, id); // Retournez un objet vide ou lancez une erreur selon votre besoin
   }
 }
 
@@ -196,7 +253,8 @@ export function pythonCodeToBlockly(code : string) : BlocklyBlock {
   if (ast) {
     const cursor = ast.cursor();
     const root = astToJSON(code, cursor)
-    const blocks = mapNodeToBlockly(root, 0)[0]
+    console.log(JSON.stringify(root, null,2))
+    const blocks = mapNodeToBlockly(root, [], 0)[0]
     return blocks.at(0)
   }
 }
