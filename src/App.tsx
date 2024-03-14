@@ -1,6 +1,6 @@
 import { CssBaseline, Grid } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 import BlocklyPanel from './components/Blockly';
 //import CodeAnalysis from './components/CodeAnalysis';
@@ -60,7 +60,7 @@ const App = () => {
             <BlocklyPanel theme={theme} initialJson={blockJon} setWorkspace={setWorkspace}/>
         </Grid>
         <Grid item xs={12} md={6}>
-            <CodeEditor code={initialCode} theme={theme} setCode={setCode} workspace={workspace}/>
+            <CodeEditor code={initialCode} theme={theme} workspace={workspace}/>
         </Grid>
       </Grid>
     </ThemeProvider>

@@ -1,5 +1,5 @@
 const INITIAL_XML =
-  '<xml xmlns="http://www.w3.org/1999/xhtml"><block type="text" x="70" y="30"><field name="TEXT">XML</field></block></xml>';
+  '<xml xmlns="http://www.w3.org/1999/xhtml"></xml>';
 
 const INITIAL_JSON = {}
 
@@ -135,6 +135,313 @@ const INITIAL_JSON_LIST_5 = {
         "name":"nombres",
         "id":"YX1D!ol+43n)G,@VgJ3@"
      }
+  ]
+}
+
+const PROGRAM_GEN = {
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "variables_set",
+        "id": "nid_6",
+        "fields": {
+          "VAR": {
+            "id": "nid_7"
+          }
+        },
+        "intputs": {
+          "VALUE": {
+            "block": {
+              "type": "lists_create_with",
+              "id": "nid_5",
+              "extraState": {
+                "itemCount": 5
+              },
+              "inputs": {
+                "ADD0": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nid_0",
+                    "fields": {
+                      "NUM": 1
+                    }
+                  }
+                },
+                "ADD1": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nid_1",
+                    "fields": {
+                      "NUM": 2
+                    }
+                  }
+                },
+                "ADD2": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nid_2",
+                    "fields": {
+                      "NUM": 3
+                    }
+                  }
+                },
+                "ADD3": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nid_3",
+                    "fields": {
+                      "NUM": 4
+                    }
+                  }
+                },
+                "ADD4": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nid_4",
+                    "fields": {
+                      "NUM": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "nombres",
+      "id": "nid_7"
+    }
+  ]
+}
+
+const PROGRAM_JSON = {
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "variables_set",
+        "id": "P68i`R;MKhM[:AF)$F*-",
+        "fields": {
+          "VAR": {
+            "id": "YX1D!ol+43n)G,@VgJ3@"
+          }
+        },
+        "inputs": {
+          "VALUE": {
+            "block": {
+              "type": "lists_create_with",
+              "id": "2.o^!k.t]nnO(`ZF_:]G",
+              "extraState": {
+                "itemCount": 5
+              },
+              "inputs": {
+                "ADD0": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "?,_j5Qv$-2_/BL@yhKz]",
+                    "fields": {
+                      "NUM": 1
+                    }
+                  }
+                },
+                "ADD1": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "/1%Qkl!~E%+YVK[#c:MH",
+                    "fields": {
+                      "NUM": 2
+                    }
+                  }
+                },
+                "ADD2": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "nvkvQ=Lstju%]+T1(V-S",
+                    "fields": {
+                      "NUM": 3
+                    }
+                  }
+                },
+                "ADD3": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "pKs)9]F-+5(Vh{6y;$rp",
+                    "fields": {
+                      "NUM": 4
+                    }
+                  }
+                },
+                "ADD4": {
+                  "block": {
+                    "type": "math_number",
+                    "id": "=lz]#Sr3dEiAVMSE}@F4",
+                    "fields": {
+                      "NUM": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "next": {
+          "block": {
+            "type": "controls_forEach",
+            "id": "Hh8fRIxc`OZjr_dxfPY;",
+            "fields": {
+              "VAR": {
+                "id": "Cg!CSk/ZJo2XQN3=VVrz"
+              }
+            },
+            "inputs": {
+              "LIST": {
+                "block": {
+                  "type": "variables_get",
+                  "id": "![JEg;U_3J2=7FBy:PD]",
+                  "fields": {
+                    "VAR": {
+                      "id": "YX1D!ol+43n)G,@VgJ3@"
+                    }
+                  }
+                }
+              },
+              "DO": {
+                "block": {
+                  "type": "controls_if",
+                  "id": "./Mcsg5dXZ4P@leshYDl",
+                  "extraState": {
+                    "hasElse": true
+                  },
+                  "inputs": {
+                    "IF0": {
+                      "block": {
+                        "type": "logic_compare",
+                        "id": "at-fGTXFXGX`g:9kBnBj",
+                        "fields": {
+                          "OP": "EQ"
+                        },
+                        "inputs": {
+                          "A": {
+                            "block": {
+                              "type": "math_modulo",
+                              "id": "w9:x@rMGZb7XDq^(`Zx=",
+                              "inputs": {
+                                "DIVIDEND": {
+                                  "shadow": {
+                                    "type": "math_number",
+                                    "id": "F9T,X}(aUM_OB#?7m%=d",
+                                    "fields": {
+                                      "NUM": "64"
+                                    }
+                                  },
+                                  "block": {
+                                    "type": "variables_get",
+                                    "id": "j*s7}Y%(TC[CK!hLqY~t",
+                                    "fields": {
+                                      "VAR": {
+                                        "id": "Cg!CSk/ZJo2XQN3=VVrz"
+                                      }
+                                    }
+                                  }
+                                },
+                                "DIVISOR": {
+                                  "shadow": {
+                                    "type": "math_number",
+                                    "id": "3Y|$o?*?Da.e0rMUM`*V",
+                                    "fields": {
+                                      "NUM": 2
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "B": {
+                            "block": {
+                              "type": "math_number",
+                              "id": "W%S{Q~UZDa36W$nQ.v;f",
+                              "fields": {
+                                "NUM": 0
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "DO0": {
+                      "block": {
+                        "type": "text_print",
+                        "id": "_38YN=J^hynPpE45Y1-t",
+                        "inputs": {
+                          "TEXT": {
+                            "shadow": {
+                              "type": "text",
+                              "id": "wD1N(,PDu.!PT)_g_j(J",
+                              "fields": {
+                                "TEXT": "{nombre} est pair."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "ELSE": {
+                      "block": {
+                        "type": "text_print",
+                        "id": "K*fH$3=i]y.1+N.xs1Nn",
+                        "inputs": {
+                          "TEXT": {
+                            "shadow": {
+                              "type": "text",
+                              "id": "$6%]zJN}7RKI(Q_jHgp6",
+                              "fields": {
+                                "TEXT": "{nombre} est impair."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "text_print",
+                "id": "}DR[9nW-LBR_Bt--F:pc",
+                "inputs": {
+                  "TEXT": {
+                    "shadow": {
+                      "type": "text",
+                      "id": "rn.x~+p2-l:|;CvVLj.+",
+                      "fields": {
+                        "TEXT": "Fin de la vérification."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "nombres",
+      "id": "YX1D!ol+43n)G,@VgJ3@"
+    },
+    {
+      "name": "nombre",
+      "id": "Cg!CSk/ZJo2XQN3=VVrz"
+    }
   ]
 }
 
@@ -1152,6 +1459,7 @@ const ConfigFiles = {
   INITIAL_JSON,
   INITIAL_JSON_LIST_2,
   INITIAL_JSON_LIST_5,
+  PROGRAM_JSON,
   INITIAL_TOOLBOX_XML,
   INITIAL_TOOLBOX_JSON,
   INITIAL_TOOLBOX_CATEGORIES,
