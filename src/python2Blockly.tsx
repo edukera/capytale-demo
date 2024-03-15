@@ -91,6 +91,22 @@ const foldChildrenAsMember = (root : BlocklyBlock, children : BlocklyBlock[] | u
   }, [root, 0])[0]
 }
 
+const map_logical_operator = (op : string) : string => {
+  switch (op) {
+    case "==" : return "EQ"
+    case "!=" : return "NEQ"
+    case "<"  : return "LT"
+    case "<=" : return "LTE"
+    case ">"  : return "GT"
+    case ">=" : return "GTE"
+  }
+  return "EQ"
+}
+
+const isLogical = (op : string) : boolean => {
+  return ["==", "!=", "<", "<=", ">", ">="].includes(op)
+}
+
 function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
 
   switch (node.type) {
@@ -161,6 +177,10 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         }
       }], vars, id + 1]
     }
+    case "ParenthesizedExpression": {
+      if (node.children?.at(1) === undefined) throw new Error("Invalid Expression")
+      return mapNodeToBlockly(node.children[1], vars, id)
+    }
     case "ExpressionStatement": {
       if (node.children?.at(0) === undefined) throw new Error("Invalid Expression")
       return mapNodeToBlockly(node.children[0], vars, id)
@@ -222,7 +242,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       }
 
     }
-    case "VariableName" : {
+    case "VariableName": {
       const var_name = node.value
       // search id in vars
       const var_id = vars.reduce((acc, v) => {
@@ -239,6 +259,47 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
           }
         }
       }], vars, id + 1 ]
+    }
+    case "BinaryExpression": {
+      const left  = node.children?.at(0)
+      const op    = node.children?.at(1)
+      const right = node.children?.at(2)
+      if (left === undefined || op === undefined || right === undefined) throw new Error("Invalid BinaryExpression")
+      const [ left_block, left_vars, left_id ]   = foldChildren([left], vars, id)
+      const [ right_block, right_vars, right_id] = foldChildren([right], left_vars, left_id)
+      if (isLogical(op.value)) {
+        return [ [{
+          type: "logic_compare",
+          id: "nid_" + right_id,
+          fields: {
+            OP: map_logical_operator(op.value)
+          },
+          inputs: {
+            A: {
+              block: foldChildrenAsNext(left_block)[0]
+            },
+            B: {
+              block: foldChildrenAsNext(right_block)[0]
+            }
+          }
+        }], right_vars, right_id + 1]
+      } else if (op.value === "%") {
+        return [ [{
+          type: "math_modulo",
+          id: "nid_" + right_id,
+          inputs: {
+            DIVIDEND: {
+              shadow: foldChildrenAsNext(left_block)[0]
+            },
+            DIVISOR: {
+              shadow: foldChildrenAsNext(left_block)[0]
+            }
+          }
+        }], right_vars, right_id + 1]
+      } else {
+        console.warn(`Type d'opération non géré: ${op.value}`);
+        return empty(vars, id);
+      }
     }
     // Ajoutez des cas pour les autres types de nœuds...
 
