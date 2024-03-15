@@ -122,6 +122,38 @@ const isArithmetic = (op : string) : boolean => {
   return ["+", "-", "*", "/", "**"].includes(op)
 }
 
+type CondBody = [ ASTNode | undefined, (ASTNode | undefined)[] | undefined ]
+
+type If = {
+  base : CondBody;
+  elif : CondBody[];
+  el   : ASTNode[] | undefined
+}
+
+function isASTNode(value: ASTNode | undefined): value is ASTNode {
+  return value !== undefined;
+}
+
+const make_if = (root : ASTNode) : If => {
+  if (root.children?.at(0)?.type !== "if") throw new Error("Invalid IfStatement")
+  const base : CondBody   = [ root.children.at(1), root.children.at(2)?.children?.slice(1) ]
+  const elif : CondBody[] = []
+  var   el   : ASTNode[] | undefined = undefined
+  for (var i = 0; i < root.children?.slice(3).length; i++) {
+    const node = root.children.at(i+3)
+    if (node === undefined) throw new Error("Make if Error")
+    if (node.type === 'elif') {
+      const elifCondBody : CondBody = [ root.children.at(i+4), root.children.at(i+5)?.children?.slice(1) ]
+      i += 2;
+      elif.push(elifCondBody)
+    } else if (node.type === 'else') {
+      el = root.children.at(i+4)?.children?.slice(1)
+      i += 2;
+    }
+  }
+  return { base, elif, el }
+}
+
 function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
 
   switch (node.type) {
@@ -331,6 +363,37 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         console.warn(`Type d'opération non géré: ${op.value}`);
         return empty(vars, id);
       }
+    }
+    case "IfStatement": {
+      const ifStruct = make_if(node)
+      console.log(ifStruct)
+      // fold conditions and bodies
+      const [ base_blocks, base_vars, base_id ] = foldChildren(ifStruct.base.flat().filter(isASTNode), vars, id)
+      const init_folded_elif : [ BlocklyBlock[][], Vars, number ] = [ [], base_vars, base_id ]
+      const [ elif_blocks, elif_vars, elif_id ] = ifStruct.elif.reduce((acc, condprod) => {
+        const [elif_b, elif_v, elif_i] = foldChildren(condprod.flat().filter(isASTNode), acc[1], acc[2])
+        return [ [...acc[0], elif_b], elif_v, elif_i ]
+      }, init_folded_elif)
+      const [ else_blocks, else_vars, else_id ] = ifStruct.el ? foldChildren(ifStruct.el?.flat().filter(isASTNode), elif_vars, elif_id) : empty(elif_vars, elif_id)
+      const inputs : any = {}
+      inputs["IF0"] = base_blocks[0].length > 0 ? { block: base_blocks[0][0] } : {}
+      inputs["DO0"] = base_blocks.slice(1).length > 0 ? { block : foldChildrenAsNext(base_blocks.slice(1).flat()) } : {}
+      elif_blocks.forEach((elif_block, i) => {
+        inputs["IF" + (i+1)] = elif_block[0].length > 0 ? { block: elif_block[0][0] } : {}
+        inputs["DO" + (i+1)] = elif_block.slice(1).length > 0 ? { block: foldChildrenAsNext(elif_block.slice(1).flat()) } : {}
+      })
+      if(ifStruct.el) {
+        inputs["ELSE"] = else_blocks.length > 0 ? { block: foldChildrenAsNext(else_blocks.flat()) } : {}
+      }
+      return [ [{
+        type: "controls_if",
+        id: "nid_" + id,
+        extraState: {
+          elseIfCount: ifStruct.elif.length,
+          hasElse: ifStruct.el !== undefined
+        },
+        inputs: inputs
+      }], else_vars, else_id + 1]
     }
     // Ajoutez des cas pour les autres types de nœuds...
 
