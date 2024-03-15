@@ -103,8 +103,23 @@ const map_logical_operator = (op : string) : string => {
   return "EQ"
 }
 
+const map_arithmetic_operator = (op : string) : string => {
+  switch (op) {
+    case "+" : return "ADD"
+    case "-" : return "MINUS"
+    case "*" : return "MULTIPLY"
+    case "/" : return "DIVIDE"
+    case "**": return "POWER"
+  }
+  return "ADD"
+}
+
 const isLogical = (op : string) : boolean => {
   return ["==", "!=", "<", "<=", ">", ">="].includes(op)
+}
+
+const isArithmetic = (op : string) : boolean => {
+  return ["+", "-", "*", "/", "**"].includes(op)
 }
 
 function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
@@ -283,6 +298,22 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
             }
           }
         }], right_vars, right_id + 1]
+      } else if (isArithmetic(op.value)) {
+        return [ [{
+          type: "math_arithmetic",
+          id: "nid_" + right_id,
+          fields: {
+            OP: map_arithmetic_operator(op.value)
+          },
+          inputs: {
+            A: {
+              shadow: foldChildrenAsNext(left_block)[0]
+            },
+            B: {
+              shadow: foldChildrenAsNext(right_block)[0]
+            }
+          }
+        }], right_vars, right_id + 1]
       } else if (op.value === "%") {
         return [ [{
           type: "math_modulo",
@@ -292,7 +323,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
               shadow: foldChildrenAsNext(left_block)[0]
             },
             DIVISOR: {
-              shadow: foldChildrenAsNext(left_block)[0]
+              shadow: foldChildrenAsNext(right_block)[0]
             }
           }
         }], right_vars, right_id + 1]
