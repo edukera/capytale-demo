@@ -12,12 +12,16 @@ type CodeEditorProps = {
 }
 
 export const CodeEditor = ({ code, theme, workspace } : CodeEditorProps) => {
-  console.log("Hello from CodeEditor")
   const onChange = (val : any, viewUpdate : any) => {
     const blockly = pythonCodeToBlockly(val)
     console.log(JSON.stringify(blockly, null, 2))
-    console.log(workspace)
+    //console.log(workspace)
     workspace.clear();
+    const variables = workspace.getAllVariables();
+    // Parcourt et supprime chaque variable par son ID
+    variables.forEach(function(variable : any) {
+      workspace.deleteVariableById(variable.getId());
+    });
     Blockly.serialization.workspaces.load(blockly, workspace);
   }
   return <CodeMirror

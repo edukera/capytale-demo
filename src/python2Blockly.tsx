@@ -7,7 +7,7 @@ import { parser as PythonParser } from '@lezer/python';
 interface ASTNode {
   type: string;
   children?: ASTNode[];
-  value : string
+  value: string
 }
 
 export const parseInput = (code : string) : string => {
@@ -15,7 +15,7 @@ export const parseInput = (code : string) : string => {
   if (tree) {
     const cursor = tree.cursor();
     const ast = JSON.stringify(astToJSON(code, cursor), null, 2)
-    console.log(ast)
+    //console.log(ast)
     return ast;
   } else {
     return 'Le code Python est invalide.';
@@ -69,9 +69,11 @@ const foldChildren = (chilren : ASTNode[] | undefined, vars : Vars, id : number)
  * @param children
  * @returns root node with first child attached as next
  */
-const foldChildrenAsNext = (children : BlocklyBlock[] | undefined) : BlocklyBlock => {
+const foldChildrenAsNext = (children : BlocklyBlock[] | undefined, filter : boolean = true) : BlocklyBlock => {
   if (children === undefined) throw new Error("No Children Node")
-  return children.reduceRight((acc, node) => {
+  // filter out variable_get nodes (makes Blockly crash)
+  const nodes = filter ? children.filter(n => filter ? n.type !== "variables_get" : false) : children
+  return nodes.reduceRight((acc, node) => {
     return { ...node, next : { block : acc } }
   })
 }
@@ -178,20 +180,30 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       const name = node.children?.at(0)?.value
       if (name === undefined) throw new Error("Invalid Assign")
       const [ blocks, new_vars, new_id ] = foldChildren(node.children?.slice(2), vars, id)
+      var var_id = "nid_" + (new_id + 1)
+      var new_var : boolean = true
+      if (vars.map(x => x[0]).includes(name)) {
+        new_var = false
+        const idx = vars.map(x => x[0]).indexOf(name)
+        var_id = "nid_" + vars[idx][1]
+      }
+      const final_vars = new_var ? new_vars.concat([[name, new_id + 1]]) : new_vars
+      const final_id   = new_var ? new_id + 2 : new_id + 1
+      //console.log(blocks)
       return [ [{
         type: "variables_set",
         id: "nid_" + new_id,
         fields: {
           VAR: {
-            id: "nid_" + (new_id + 1)
+            id: var_id
           }
         },
         inputs: {
           VALUE: {
-            block: blocks[0][0]
+            block: blocks.length > 0 ? blocks[0][0] : {}
           }
         }
-      }], new_vars.concat([[name, new_id + 1]]), new_id + 2 ] // a variable has been created
+      }], final_vars, final_id ] // a variable has been created
     }
     case "ArrayExpression": {
       const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.filter(node => {
@@ -220,7 +232,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         type: "text",
         id: "nid_" + id,
         fields: {
-          TEXT: node.value.replace(/^"|"$/g, '')
+          TEXT: node.value.replace(/^["']|["']$/g, '')
         }
       }], vars, id + 1]
     }
@@ -366,7 +378,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
     }
     case "IfStatement": {
       const ifStruct = make_if(node)
-      console.log(ifStruct)
+      //console.log(ifStruct)
       // fold conditions and bodies
       const [ base_blocks, base_vars, base_id ] = foldChildren(ifStruct.base.flat().filter(isASTNode), vars, id)
       const init_folded_elif : [ BlocklyBlock[][], Vars, number ] = [ [], base_vars, base_id ]
@@ -380,7 +392,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       inputs["DO0"] = base_blocks.slice(1).length > 0 ? { block : foldChildrenAsNext(base_blocks.slice(1).flat()) } : {}
       elif_blocks.forEach((elif_block, i) => {
         inputs["IF" + (i+1)] = elif_block[0].length > 0 ? { block: elif_block[0][0] } : {}
-        inputs["DO" + (i+1)] = elif_block.slice(1).length > 0 ? { block: foldChildrenAsNext(elif_block.slice(1).flat()) } : {}
+        inputs["DO" + (i+1)] = elif_block.slice(1).length > 0 ? { block: foldChildrenAsNext(elif_block.slice(1).flat(), false) } : {}
       })
       if(ifStruct.el) {
         inputs["ELSE"] = else_blocks.length > 0 ? { block: foldChildrenAsNext(else_blocks.flat()) } : {}
