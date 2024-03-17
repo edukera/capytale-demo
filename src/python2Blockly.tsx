@@ -156,17 +156,70 @@ const make_if = (root : ASTNode) : If => {
   return { base, elif, el }
 }
 
-function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
+const getBlockHeight = (block : any) : number => {
+  if (block?.next !== undefined) {
+    const height = block.next.block !== undefined ? getBlockHeight(block.next.block) : getBlockHeight(block.next)
+    return 1 + height;
+  } else if (block?.type !== undefined) {
+    switch (block.type) {
+      case "procedures_defnoreturn": {
+        return 1 + getBlockHeight(block.inputs.STACK.block)
+      }
+      case "controls_if": {
+        return Object.keys(block.inputs).reduce((acc, key) => {
+          return acc + getBlockHeight(block.inputs[key].block)
+        }, 1);
+      }
+    }
+  }
+  return 1
+}
 
+const unit_block_height = 30
+const block_space = 30
+
+const setBlockPositions = (blocks : BlocklyBlock[]) : BlocklyBlock[] => {
+  return blocks.reduce(([acc_blocks, acc_height], block) => {
+    block["x"] = 5
+    const current_height = getBlockHeight(block)
+    //console.log(`Height: ${current_height}`)
+    const space = acc_height === 0 ? 5 : block_space
+    const current_y = acc_height + space
+    block["y"] = current_y
+    return [ [ ...acc_blocks, block], current_y + current_height * unit_block_height]
+  }, [ [], 0])[0]
+}
+
+type Routine = {
+  name : string,
+  args : string[]
+}
+
+var routines : Routine[] = []
+
+const clear_routines = () => { routines = [] }
+
+function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
   switch (node.type) {
     case "Script": {
       // Root node
       if (node.children === undefined) throw new Error("Invalid script")
       const [ blocks, new_vars, new_id ] = foldChildren(node.children, vars, id)
+      const [ defs, main_blocks ] = blocks.filter((b: any) => { return b.length > 0 }).flat().reduce((acc, node) => {
+        if(["procedures_defnoreturn"].includes(node.type)) {
+          return [ [...acc[0], node], acc[1] ]
+        } else {
+          return [ acc[0], [ ...acc[1], node ] ]
+        }
+      }, [[], []])
+      const main = main_blocks.length > 0 ? foldChildrenAsNext(main_blocks) : []
+      console.log(getBlockHeight(main))
+      // set blocks position
+      const final_blocks = setBlockPositions([ ...defs, main ])
       return [ [{
         blocks: {
           languageVersion: 0,
-          blocks: [ foldChildrenAsNext(blocks.filter((b: any) => { return b.length > 0 }).flat()) ],
+          blocks: final_blocks,
         },
         variables: new_vars.map(v => {
           return  {
@@ -260,6 +313,20 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
             }
           }
         }], new_vars, new_id + 1]
+      } else if (routines.map(r => r.name).includes(name)) {
+        const  [ arg_blocks, new_vars, new_id ] = foldChildren(node.children?.at(1)?.children?.filter(node => {
+          return !['(', ',', ')'].includes(node.type)
+        }), vars, id)
+        const args = foldChildrenAsMember({}, arg_blocks.flat().map((b : any) => { return { block: b }}), "ARG")
+        return [ [{
+          type: "procedures_callnoreturn",
+          id: "nid_" + new_id,
+          "extraState": {
+            name: name,
+            params: routines.reduce((acc,r) => { return r.name === name ? r.args : acc }, ([] as string[]))
+          },
+          "inputs": args
+        }], new_vars, new_id ]
       } else {
         console.warn(`CallExpression non géré`);
         return empty(vars, id);
@@ -407,6 +474,46 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         inputs: inputs
       }], else_vars, else_id + 1]
     }
+    case "FunctionDefinition": {
+      const name          = node.children?.at(1)?.value
+      const params        = node.children?.at(2)?.children?.filter(p => p.type === 'VariableName')
+      const body_children = node.children?.at(3)?.children?.slice(1)
+      if (name === undefined || params === undefined || body_children === undefined)
+        throw new Error("Invalid FunctionDefinition")
+      routines.push({ name : name, args : params.map(p => p.value)})
+      // create param variables
+      const init_acc : [ Vars, number ] = [ vars, id ]
+      const [new_vars, new_id] : [ Vars, number ] = params.reduce((acc, node) => {
+        const var_name = node.value
+        const var_id = acc[1] + 1
+        return [ [...acc[0], [ var_name, var_id ]], acc[1] + 2 ]
+      }, init_acc)
+      // fold body children
+      const [final_blocks, final_vars, final_id] = foldChildren(body_children, new_vars, new_id)
+      return [ [{
+        type: "procedures_defnoreturn",
+        id: "nid_" + id,
+        extraState: {
+          params: new_vars.map(x => { return { name : x[0], id : "nid_" + x[1] } })
+        },
+        icons: {
+          comment: {
+            text: "Describe this function...",
+            pinned: false,
+            height: 80,
+            width: 160
+          }
+        },
+        fields: {
+          NAME: name
+        },
+        inputs: {
+          STACK: {
+            block: foldChildrenAsNext(final_blocks.flat(), false)
+          }
+        }
+      }], final_vars, final_id ]
+    }
     // Ajoutez des cas pour les autres types de nœuds...
 
     default:
@@ -421,6 +528,7 @@ export function pythonCodeToBlockly(code : string) : BlocklyBlock {
     const cursor = ast.cursor();
     const root = astToJSON(code, cursor)
     console.log(JSON.stringify(root, null,2))
+    clear_routines()
     const blocks = mapNodeToBlockly(root, [], 0)[0]
     return blocks.at(0)
   }
