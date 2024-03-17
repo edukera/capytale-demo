@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react'
 import Blockly from "blockly";
+import { pythonGenerator } from 'blockly/python';
+import React, { useEffect } from 'react'
 import { BlocklyWorkspace } from "react-blockly";
-import {pythonGenerator} from 'blockly/python';
+
 import ConfigFiles from "./toolbox/content";
 
 import './Blockly.css'
@@ -39,10 +40,10 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
   }, []);
   const onInject = (workspace : any) => {
     workspace.addChangeListener((e: CustomEvent) => {
-      const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
-      console.log(newJson)
+      //const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
+      //console.log(newJson)
       if (e.isUiEvent && e.type === 'drag' && e.isStart === false) {
-        console.log(e)
+        //console.log(e)
         const pythonCode = fixCode(pythonGenerator.workspaceToCode(workspace))
         //console.log(pythonCode)
         setCode(pythonCode)
