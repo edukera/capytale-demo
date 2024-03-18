@@ -1,6 +1,6 @@
 import { CssBaseline, Grid } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 
 import BlocklyPanel from './components/Blockly';
 //import CodeAnalysis from './components/CodeAnalysis';
