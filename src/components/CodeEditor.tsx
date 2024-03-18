@@ -15,7 +15,7 @@ const Linter = linter(view => {
       from: node.from,
       to: node.to,
       severity: "warning",
-      message: "Invalid Syntax",
+      message: "Syntaxe invalide.",
     })
   })
   return diagnostics

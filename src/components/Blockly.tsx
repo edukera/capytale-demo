@@ -1,6 +1,6 @@
 import Blockly from "blockly";
 import { pythonGenerator } from 'blockly/python';
-import React, { useEffect } from 'react'
+import React from 'react'
 import { BlocklyWorkspace } from "react-blockly";
 
 import ConfigFiles from "./toolbox/content";
