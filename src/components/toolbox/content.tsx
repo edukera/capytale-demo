@@ -369,6 +369,21 @@ const INITIAL_TOOLBOX_JSON = {
   contents: [
     {
       kind: "category",
+      name: "Personnalisé",
+      colour: 230,
+      contents: [
+        {
+          kind: "block",
+          type: "unknown_code"
+        },
+        {
+          kind: "block",
+          type: "unknown_expr"
+        }
+      ]
+    },
+    {
+      kind: "category",
       name: "Logic",
       colour: 210,
       contents: [
@@ -959,6 +974,7 @@ const INITIAL_TOOLBOX_JSON = {
 const INITIAL_TOOLBOX_XML =
   '<xml xmlns="http://www.w3.org/1999/xhtml" id="toolbox" style="display: none;">\n' +
   '  <category name="Logic" colour="#5C81A6">\n' +
+  '    <block type="afficher_texte"></block>\n' +
   '    <block type="controls_if"></block>\n' +
   '    <block type="logic_compare">\n' +
   '      <field name="OP">EQ</field>\n' +
@@ -1323,6 +1339,7 @@ const INITIAL_TOOLBOX_CATEGORIES = [
   {
     name: "Controls",
     blocks: [
+      { type: "afficher_texte"},
       { type: "controls_if" },
       {
         type: "controls_repeat_ext",

@@ -1,5 +1,5 @@
 import Blockly from "blockly";
-import { pythonGenerator } from 'blockly/python';
+import { pythonGenerator, Order } from 'blockly/python';
 import React from 'react'
 import { BlocklyWorkspace } from "react-blockly";
 
@@ -39,9 +39,54 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
     //console.log(newJson)
   }, []);
   const onInject = (workspace : any) => {
+    Blockly.defineBlocksWithJsonArray([
+      {
+        "type": "unknown_code",
+        "message0": "Code inconnu %1",
+        "args0": [
+          {
+            "type": "field_input",
+            "name": "TEXTE",
+            "text": "Bonjour, Blockly!"
+          }
+        ],
+        "colour":"#cccccc",
+        "previousStatement": null,
+        "nextStatement": null
+      },
+      {
+        "type": "unknown_expr",
+        "message0": "Expression inconnue %1",
+        "args0": [
+          {
+            "type": "field_input",
+            "name": "TEXTE",
+            "text": "Bonjour, Blockly!"
+          }
+        ],
+        "colour":"#cccccc",
+        "output": null,
+      },
+    ]);
+    pythonGenerator.forBlock['unknown_code'] = function(block:any) {
+      // Récupérer la valeur du champ texte.
+      const texte = block.getFieldValue('TEXTE');
+      // Créer la chaîne de code pour afficher le texte.
+      const code = `${texte}\n`;
+      // Le deuxième paramètre détermine l'ordre des opérations, mais n'est pas crucial ici.
+      return code;
+    }
+    pythonGenerator.forBlock['unknown_expr'] = function(block:any) {
+      // Récupérer la valeur du champ texte.
+      const texte = block.getFieldValue('TEXTE');
+      // Créer la chaîne de code pour afficher le texte.
+      const code = `${texte}\n`;
+      // Le deuxième paramètre détermine l'ordre des opérations, mais n'est pas crucial ici.
+      return [code, Order.NONE ];
+    }
     workspace.addChangeListener((e: CustomEvent) => {
-      const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
-      console.log(newJson)
+      //const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
+      //console.log(newJson)
       if (e.isUiEvent && e.type === 'drag' && e.isStart === false) {
         //console.log(e)
         const pythonCode = fixCode(pythonGenerator.workspaceToCode(workspace))

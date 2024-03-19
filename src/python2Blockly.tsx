@@ -1,5 +1,6 @@
 import { TreeCursor } from '@lezer/common';
 import { parser as PythonParser } from '@lezer/python';
+import { create } from 'domain';
 
 /* ***************************************************************************
 * Lezer AST to local simple AST
@@ -55,10 +56,10 @@ const empty = (vars : Vars, id : number) : BlockFold => [[], vars, id]
  * @param var_id
  * @returns list of blocks, list of vars, new identifier
  */
-const foldChildren = (chilren : ASTNode[] | undefined, vars : Vars, id : number) : BlockFold => {
-  if (chilren === undefined) throw new Error("No Children Node")
+const foldChildren = (chilren : ASTNode[] | undefined, vars : Vars, id : number, create_expr : boolean = true) : BlockFold => {
+  if (chilren === undefined) return empty(vars, id)
   return chilren.reduce((acc, node) => {
-    const [block, new_vars, new_id] = mapNodeToBlockly(node, acc[1], acc[2])
+    const [block, new_vars, new_id] = mapNodeToBlockly(node, acc[1], acc[2], create_expr)
     return [ [ ...acc[0], block ], new_vars, new_id ]
   }, empty(vars, id))
 }
@@ -72,7 +73,8 @@ const foldChildren = (chilren : ASTNode[] | undefined, vars : Vars, id : number)
 const foldChildrenAsNext = (children : BlocklyBlock[] | undefined, filter : boolean = true) : BlocklyBlock => {
   if (children === undefined) throw new Error("No Children Node")
   // filter out variable_get nodes (makes Blockly crash)
-  const nodes = filter ? children.filter(n => filter ? n.type !== "variables_get" : false) : children
+  const nodes = filter ? children.filter(n => filter ? n.type !== "variables_get" && n.type !== "⚠" : false) : children
+  if (nodes.length === 0) return get_unknown_code({ type:"", value: "" }, [], 4535435)[0][0]
   return nodes.reduceRight((acc, node) => {
     return { ...node, next : { block : acc } }
   })
@@ -203,12 +205,32 @@ var routines : Routine[] = []
 
 const clear_routines = () => { routines = [] }
 
-function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
+const get_unknown_code = (node: ASTNode, vars : Vars, id: number) : BlockFold => {
+  return [ [{
+    type: "unknown_code",
+    id: "nid_" + id,
+    fields: {
+      TEXTE: node.value
+    }
+  }], vars, id + 1 ]
+}
+
+const get_unknown_expr = (node: ASTNode, vars : Vars, id: number) : BlockFold => {
+  return [ [{
+    type: "unknown_expr",
+    id: "nid_" + id,
+    fields: {
+      TEXTE: node.value
+    }
+  }], vars, id + 1 ]
+}
+
+function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number, create_expr : boolean = true): BlockFold {
   switch (node.type) {
     case "Script": {
       // Root node
       if (node.children === undefined) throw new Error("Invalid script")
-      const [ blocks, new_vars, new_id ] = foldChildren(node.children, vars, id)
+      const [ blocks, new_vars, new_id ] = foldChildren(node.children.filter(n => { return n.type !== '⚠' }), vars, id, false)
       const [ defs, main_blocks ] = blocks.filter((b: any) => { return b.length > 0 }).flat().reduce((acc, node) => {
         if(["procedures_defnoreturn", "procedures_defreturn"].includes(node.type)) {
           return [ [...acc[0], node], acc[1] ]
@@ -257,7 +279,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         },
         inputs: {
           VALUE: {
-            block: blocks.length > 0 ? blocks[0][0] : {}
+            block: blocks.length > 0 ? blocks[0][0] : get_unknown_expr({ type:"", value: "" }, [], 4535435)[0][0]
           }
         }
       }], final_vars, final_id ] // a variable has been created
@@ -272,7 +294,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         var_id += vars[idx][1]
       } else {
         console.warn(`Type d'opération non géré: ${operator}`);
-        return empty(vars, id)
+        return create_expr ? get_unknown_expr(node, vars, id) : get_unknown_code(node, vars, id)
       }
       const delta = node.children?.at(2)
       if(delta === undefined) throw new Error("Invalid Update")
@@ -329,7 +351,10 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
     }
     case "ExpressionStatement": {
       if (node.children?.at(0) === undefined) throw new Error("Invalid Expression")
-      return mapNodeToBlockly(node.children[0], vars, id)
+      if (node.children.length === 1 && node.children.at(0)?.type === 'VariableName') {
+        return get_unknown_code(node, vars, id)
+      }
+      return mapNodeToBlockly(node.children[0], vars, id, create_expr)
     }
     case "CallExpression": {
       const name = node.children?.at(0)?.value
@@ -363,7 +388,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         }], new_vars, new_id ]
       } else {
         console.warn(`CallExpression non géré`);
-        return empty(vars, id);
+        return create_expr ? get_unknown_expr(node, vars, id) : get_unknown_code(node, vars, id);
       }
     }
     case "ForStatement": {
@@ -378,7 +403,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         if (list_variable_node === undefined) throw new Error("Invalid for in statement")
         const [ list_var_block, new_vars2, new_id ] = foldChildren([list_variable_node], new_vars, id + 2)
         // fold children
-        const [ blocks, new_vars3, new_id2 ] = foldChildren(node.children.at(4)?.children, new_vars2, new_id)
+        const [ blocks, new_vars3, new_id2 ] = foldChildren(node.children.at(4)?.children, new_vars2, new_id, false)
         return [ [{
           type: "controls_forEach",
           id: "nid_" + (id + 1),
@@ -392,13 +417,13 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
               block: list_var_block[0][0]
             },
             DO: {
-              block: foldChildrenAsNext(blocks.flat())
+              block: foldChildrenAsNext(blocks.slice(1).flat())
             }
           },
         }], new_vars3, new_id2 + 1]
       } else {
         console.warn(`ForStatement non géré`);
-        return empty(vars, id);
+        return get_unknown_code(node, vars, id);
       }
 
     }
@@ -409,7 +434,7 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         return (v[0] === var_name) ? v[1] : acc
       }, -1)
       if (var_id === -1) {
-        return empty(vars, id);
+        return get_unknown_expr(node, vars, id);
       } else return [ [{
         type: "variables_get",
         id: "nid_" + id,
@@ -427,10 +452,10 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       if (left === undefined || op === undefined || right === undefined) throw new Error("Invalid BinaryExpression")
       if (right.type === '⚠') {
         console.warn(`Type d'opération non géré: ${op.value}`);
-        return empty(vars, id);
+        return create_expr ? get_unknown_expr(node, vars, id) : get_unknown_code(node, vars, id);
       }
-      const [ left_block, left_vars, left_id ]   = foldChildren([left], vars, id)
-      const [ right_block, right_vars, right_id] = foldChildren([right], left_vars, left_id)
+      const [ left_block, left_vars, left_id ]   = foldChildren([left], vars, id, create_expr)
+      const [ right_block, right_vars, right_id] = foldChildren([right], left_vars, left_id, create_expr)
       if (isLogical(op.value)) {
         return [ [{
           type: "logic_compare",
@@ -478,33 +503,52 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         }], right_vars, right_id + 1]
       } else {
         console.warn(`Type d'opération non géré: ${op.value}`);
-        return empty(vars, id);
+        return get_unknown_expr(node, vars, id);
       }
     }
     case "IfStatement": {
       const ifStruct = make_if(node)
       //console.log(ifStruct)
       // fold conditions and bodies
-      const [ base_blocks, base_vars, base_id ] = foldChildren(ifStruct.base.flat().filter(isASTNode), vars, id)
-      const init_folded_elif : [ BlocklyBlock[][], Vars, number ] = [ [], base_vars, base_id ]
-      const [ elif_blocks, elif_vars, elif_id ] = ifStruct.elif.reduce((acc, condprod) => {
-        const [elif_b, elif_v, elif_i] = foldChildren(condprod.flat().filter(isASTNode), acc[1], acc[2])
+      if (ifStruct.base[0] === undefined) throw new Error("Invalid IfStatement")
+      const [ base_cond_blocks, base_cond_vars, base_cond_id ] = foldChildren([ifStruct.base[0]], vars, id)
+      const [ base_do_blocks, base_vars, base_id ] = foldChildren(ifStruct.base[1]?.flat().filter(isASTNode), base_cond_vars, base_cond_id, false)
+      //const [ base_blocks, base_vars, base_id ] = foldChildren(ifStruct.base.flat().filter(isASTNode), vars, id, false)
+      const init_folded_cond_elif : [ BlocklyBlock[][], Vars, number ] = [ [], base_vars, base_id ]
+      const [ elif_cond_blocks, elif_cond_vars, elif_cond_id ] = ifStruct.elif.reduce((acc, condprod) => {
+        if (condprod[0] === undefined) throw new Error("Invalid IfStatement")
+        const [elif_b, elif_v, elif_i] = foldChildren([condprod[0]], acc[1], acc[2])
         return [ [...acc[0], elif_b], elif_v, elif_i ]
-      }, init_folded_elif)
-      const [ else_blocks, else_vars, else_id ] = ifStruct.el ? foldChildren(ifStruct.el?.flat().filter(isASTNode), elif_vars, elif_id) : empty(elif_vars, elif_id)
+      }, init_folded_cond_elif)
+      const init_folded_do_elif : [ BlocklyBlock[][], Vars, number ] = [ [], elif_cond_vars, elif_cond_id ]
+      const [ elif_do_blocks, elif_do_vars, elif_do_id ] = ifStruct.elif.reduce((acc, condprod) => {
+        const [elif_b, elif_v, elif_i] = foldChildren(condprod[1]?.flat().filter(isASTNode), acc[1], acc[2], false)
+        return [ [...acc[0], elif_b], elif_v, elif_i ]
+      }, init_folded_do_elif)
+      //const [ elif_blocks, elif_vars, elif_id ] = ifStruct.elif.reduce((acc, condprod) => {
+      //  const [elif_b, elif_v, elif_i] = foldChildren(condprod.flat().filter(isASTNode), acc[1], acc[2])
+      //  return [ [...acc[0], elif_b], elif_v, elif_i ]
+      //}, init_folded_elif)
+      const [ else_blocks, else_vars, else_id ] = ifStruct.el ? foldChildren(ifStruct.el?.flat().filter(isASTNode), elif_do_vars, elif_do_id, false) : empty(elif_do_vars, elif_do_id)
       const inputs : any = {}
-      inputs["IF0"] = base_blocks[0].length > 0 ? { block: base_blocks[0][0] } : {}
-      inputs["DO0"] = base_blocks.slice(1).length > 0 ? { block : foldChildrenAsNext(base_blocks.slice(1).flat()) } : {}
-      elif_blocks.forEach((elif_block, i) => {
+      inputs["IF0"] = base_cond_blocks[0].length > 0 ? { block: base_cond_blocks[0][0] } : {}
+      inputs["DO0"] = (base_do_blocks.length > 0) ? { block : foldChildrenAsNext(base_do_blocks.flat()) } : { block: get_unknown_code({ type:"", value: "" }, [], 4535435)[0][0] }
+      elif_cond_blocks.forEach((elif_block, i) => {
         inputs["IF" + (i+1)] = elif_block[0].length > 0 ? { block: elif_block[0][0] } : {}
-        inputs["DO" + (i+1)] = elif_block.slice(1).length > 0 ? { block: foldChildrenAsNext(elif_block.slice(1).flat(), false) } : {}
       })
+      elif_do_blocks.forEach((elif_block, i) => {
+        inputs["DO" + (i+1)] = elif_block.length > 0 ? { block: foldChildrenAsNext(elif_block.flat(), false) } : get_unknown_code({ type:"", value: "" }, [], 4535435)[0][0]
+      })
+      //elif_blocks.forEach((elif_block, i) => {
+      //  inputs["IF" + (i+1)] = elif_block[0].length > 0 ? { block: elif_block[0][0] } : {}
+      //  inputs["DO" + (i+1)] = elif_block.slice(1).length > 0 ? { block: foldChildrenAsNext(elif_block.slice(1).flat(), false) } : {}
+      //})
       if(ifStruct.el) {
-        inputs["ELSE"] = else_blocks.length > 0 ? { block: foldChildrenAsNext(else_blocks.flat()) } : {}
+        inputs["ELSE"] = else_blocks.length > 0 ? { block: foldChildrenAsNext(else_blocks.flat()) } : { block: get_unknown_code({ type:"", value: "" }, [], 4535435)[0][0] }
       }
       return [ [{
         type: "controls_if",
-        id: "nid_" + id,
+        id: "nid_" + else_id,
         extraState: {
           elseIfCount: ifStruct.elif.length,
           hasElse: ifStruct.el !== undefined
@@ -535,8 +579,12 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         return [ [...acc[0], [ var_name, var_id ]], acc[1] + 2 ]
       }, init_acc)
       // fold body children
-      const [final_blocks, final_vars, final_id] = foldChildren(body_children, new_vars, new_id)
+      if (withReturn) body_children.pop()
+      const [final_blocks, final_vars, final_id] = foldChildren(body_children, new_vars, new_id, false)
       const [return_blocks, return_vars, return_id] = foldChildren(return_children, final_vars, final_id)
+      if (return_blocks.length === 0) {
+        return_blocks.push(get_unknown_expr({ type:"", value: "" }, [], 4535435)[0][0])
+      }
       const procedure_block : any = {
         type: withReturn ? "procedures_defreturn" : "procedures_defnoreturn",
         id: "nid_" + id,
@@ -565,10 +613,19 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       }
       return [ [procedure_block ], return_vars, return_id ]
     }
+    //case "⚠": {
+    //  console.warn(`Type de nœud non géré: ${node.type}`);
+    //  return empty(vars, id)
+    //}
     // Ajoutez des cas pour les autres types de nœuds...
     default:
       console.warn(`Type de nœud non géré: ${node.type}`);
-      return empty(vars, id); // Retournez un objet vide ou lancez une erreur selon votre besoin
+      if (create_expr) {
+        return get_unknown_expr(node, vars, id); // Retournez un objet vide ou lancez une erreur selon votre besoin
+      }
+      else {
+        return get_unknown_code(node, vars, id);
+      }
   }
 }
 
@@ -577,9 +634,10 @@ export function pythonCodeToBlockly(code : string) : BlocklyBlock {
   if (ast) {
     const cursor = ast.cursor();
     const root = astToJSON(code, cursor)
-    console.log(JSON.stringify(root, null,2))
+    //console.log(JSON.stringify(root, null,2))
     clear_routines()
     const blocks = mapNodeToBlockly(root, [], 0)[0]
+    //console.log(JSON.stringify(blocks.at(0), null, 2))
     return blocks.at(0)
   }
 }
