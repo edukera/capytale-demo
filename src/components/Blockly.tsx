@@ -40,8 +40,8 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
   }, []);
   const onInject = (workspace : any) => {
     workspace.addChangeListener((e: CustomEvent) => {
-      //const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
-      //console.log(newJson)
+      const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
+      console.log(newJson)
       if (e.isUiEvent && e.type === 'drag' && e.isStart === false) {
         //console.log(e)
         const pythonCode = fixCode(pythonGenerator.workspaceToCode(workspace))

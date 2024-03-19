@@ -262,6 +262,36 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
         }
       }], final_vars, final_id ] // a variable has been created
     }
+    case "UpdateStatement": {
+      const name = node.children?.at(0)?.value
+      const operator = node.children?.at(1)?.value
+      if (name === undefined || operator === undefined) throw new Error("Invalid Update")
+      var_id = "nid_"
+      if (vars.map(x => x[0]).includes(name) && operator === '+=') {
+        const idx = vars.map(x => x[0]).indexOf(name)
+        var_id += vars[idx][1]
+      } else {
+        console.warn(`Type d'opération non géré: ${operator}`);
+        return empty(vars, id)
+      }
+      const delta = node.children?.at(2)
+      if(delta === undefined) throw new Error("Invalid Update")
+      const [ delta_blocks, new_vars, new_id ] = foldChildren([delta], vars, id)
+      return [ [{
+        type: "math_change",
+        id: "nid_" + new_id,
+        fields: {
+          VAR: {
+            id: var_id
+          }
+        },
+        inputs: {
+          DELTA: {
+            shadow: delta_blocks[0][0]
+          }
+        }
+      }], new_vars, new_id]
+    }
     case "ArrayExpression": {
       const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.filter(node => {
         return !['[', ',', ']'].includes(node.type)
@@ -340,8 +370,8 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       if (node.children?.at(0)?.type === 'for' && node.children?.at(2)?.type === 'in') {
         // create new loop var
         const loop_var = node.children?.at(1)?.value
-        if (loop_var === undefined) throw new Error("Invalid for in statement")
         const loop_var_id = "nid_" + id
+        if (loop_var === undefined) throw new Error("Invalid for in statement")
         const new_vars = vars.concat([[ loop_var, id ]])
         // fold list variable (index 3)
         const list_variable_node = node.children?.at(3)
@@ -395,6 +425,10 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number): BlockFold {
       const op    = node.children?.at(1)
       const right = node.children?.at(2)
       if (left === undefined || op === undefined || right === undefined) throw new Error("Invalid BinaryExpression")
+      if (right.type === '⚠') {
+        console.warn(`Type d'opération non géré: ${op.value}`);
+        return empty(vars, id);
+      }
       const [ left_block, left_vars, left_id ]   = foldChildren([left], vars, id)
       const [ right_block, right_vars, right_id] = foldChildren([right], left_vars, left_id)
       if (isLogical(op.value)) {
@@ -543,7 +577,7 @@ export function pythonCodeToBlockly(code : string) : BlocklyBlock {
   if (ast) {
     const cursor = ast.cursor();
     const root = astToJSON(code, cursor)
-    //console.log(JSON.stringify(root, null,2))
+    console.log(JSON.stringify(root, null,2))
     clear_routines()
     const blocks = mapNodeToBlockly(root, [], 0)[0]
     return blocks.at(0)
