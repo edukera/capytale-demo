@@ -372,7 +372,20 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number, create_expr : b
             }
           }
         }], new_vars, new_id + 1]
-      } else if (routines.map(r => r.name).includes(name)) {
+      } else if (name === 'range') {
+        const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.at(1)?.children?.filter(node => {
+          return !['(', ',', ')'].includes(node.type)
+        }), vars, id)
+        return [ [{
+          type: "range",
+          id: "nid_" + new_id,
+          fields: {
+            VALUE: {
+              shadow: blocks.at(0).at(0)
+            }
+          }
+        }], new_vars, new_id + 1]
+      }else if (routines.map(r => r.name).includes(name)) {
         const  [ arg_blocks, new_vars, new_id ] = foldChildren(node.children?.at(1)?.children?.filter(node => {
           return !['(', ',', ')'].includes(node.type)
         }), vars, id)

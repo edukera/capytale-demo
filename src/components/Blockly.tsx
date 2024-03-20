@@ -67,6 +67,22 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
         "colour":"#cccccc",
         "output": null,
       },
+      {
+        "type": "range",
+        "message0": "range %1",
+        "args0": [
+          {
+            "type": "field_number",
+            "name": "VALUE",
+            "value": 0,
+            "min": 0
+          }
+        ],
+        "output": null,
+        "colour": 260,
+        "tooltip": "",
+        "helpUrl": ""
+      }
     ]);
     pythonGenerator.forBlock['unknown_code'] = function(block:any) {
       // Récupérer la valeur du champ texte.
@@ -84,10 +100,19 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
       // Le deuxième paramètre détermine l'ordre des opérations, mais n'est pas crucial ici.
       return [code, Order.NONE ];
     }
+    pythonGenerator.forBlock['range'] = function(block:any) {
+      // Récupérer la valeur du champ texte.
+      const texte = block.getFieldValue('VALUE');
+      // Créer la chaîne de code pour afficher le texte.
+      const code = `range(${texte})\n`;
+      // Le deuxième paramètre détermine l'ordre des opérations, mais n'est pas crucial ici.
+      return [code, Order.NONE ];
+    }
     workspace.addChangeListener((e: CustomEvent) => {
       //const newJson = JSON.stringify(Blockly.serialization.workspaces.save(workspace));
       //console.log(newJson)
-      if (e.isUiEvent && e.type === 'drag' && e.isStart === false) {
+      //console.log(e)
+      if (e.isUiEvent && ((e.type === 'drag' && e.isStart === false) || e.type === 'click') ) {
         //console.log(e)
         const pythonCode = fixCode(pythonGenerator.workspaceToCode(workspace))
         //console.log(pythonCode)

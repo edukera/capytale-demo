@@ -379,6 +379,10 @@ const INITIAL_TOOLBOX_JSON = {
         {
           kind: "block",
           type: "unknown_expr"
+        },
+        {
+          kind: "block",
+          type: "range"
         }
       ]
     },
