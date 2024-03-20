@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/capytale-demo/static/css/main.0325cd9a.css",
-    "main.js": "/capytale-demo/static/js/main.c7889cb1.js",
+    "main.js": "/capytale-demo/static/js/main.29cc8853.js",
     "static/js/453.6e60383c.chunk.js": "/capytale-demo/static/js/453.6e60383c.chunk.js",
     "index.html": "/capytale-demo/index.html",
     "main.0325cd9a.css.map": "/capytale-demo/static/css/main.0325cd9a.css.map",
-    "main.c7889cb1.js.map": "/capytale-demo/static/js/main.c7889cb1.js.map",
+    "main.29cc8853.js.map": "/capytale-demo/static/js/main.29cc8853.js.map",
     "453.6e60383c.chunk.js.map": "/capytale-demo/static/js/453.6e60383c.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.0325cd9a.css",
-    "static/js/main.c7889cb1.js"
+    "static/js/main.29cc8853.js"
   ]
 }
