@@ -378,10 +378,23 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number, create_expr : b
       }
       return mapNodeToBlockly(node.children[0], vars, id, create_expr)
     }
+    case "ArgList": {
+      if (node.children?.at(0) === undefined) throw new Error("Invalid Expression")
+      if (node.children.length === 1 && node.children.at(0)?.type === 'VariableName') {
+        return get_unknown_code(node, vars, id)
+      }
+      return mapNodeToBlockly(node.children[1], vars, id, create_expr)
+    }
     case "CallExpression": {
       const name = node.children?.at(0)?.value
       if (name === undefined) throw new Error("Invalid call expression")
-      if (name === 'print') {
+      if (name === 'int') {
+        if (node.children?.at(0) === undefined) throw new Error("Invalid Expression")
+        if (node.children.length === 2) {
+          return mapNodeToBlockly(node.children[1], vars, id, create_expr)
+        }
+        return get_unknown_expr(node, vars, id)
+      } else if (name === 'print') {
         const  [ blocks, new_vars, new_id ] = foldChildren(node.children?.at(1)?.children?.filter(node => {
           return !['(', ',', ')'].includes(node.type)
         }), vars, id)
