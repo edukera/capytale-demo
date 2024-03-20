@@ -106,7 +106,7 @@ export default function BlocklyPanel({ theme, setWorkspace, setCode } : BlocklyP
       // Récupérer la valeur du champ texte.
       const texte = block.getFieldValue('VALUE');
       // Créer la chaîne de code pour afficher le texte.
-      const code = `range(${texte})\n`;
+      const code = `range(${texte})`;
       // Le deuxième paramètre détermine l'ordre des opérations, mais n'est pas crucial ici.
       return [code, Order.NONE ];
     }
