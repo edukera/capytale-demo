@@ -388,7 +388,7 @@ const INITIAL_TOOLBOX_JSON = {
     },
     {
       kind: "category",
-      name: "Logic",
+      name: "Logique",
       colour: 210,
       contents: [
         {
@@ -426,7 +426,7 @@ const INITIAL_TOOLBOX_JSON = {
     },
     {
       kind: "category",
-      name: "Loops",
+      name: "Boucles",
       colour: 120,
       contents: [
         {
@@ -639,7 +639,7 @@ const INITIAL_TOOLBOX_JSON = {
     },
     {
       kind: "category",
-      name: "Text",
+      name: "Texte",
       colour: 160,
       contents: [
         {
@@ -786,7 +786,7 @@ const INITIAL_TOOLBOX_JSON = {
     },
     {
       kind: "category",
-      name: "Lists",
+      name: "Listes",
       colour: 259,
       contents: [
         {
@@ -901,7 +901,7 @@ const INITIAL_TOOLBOX_JSON = {
     },
     {
       kind: "category",
-      name: "Colour",
+      name: "Couleur",
       colour: 19,
       contents: [
         {

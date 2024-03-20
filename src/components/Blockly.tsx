@@ -2,10 +2,12 @@ import Blockly from "blockly";
 import { pythonGenerator, Order } from 'blockly/python';
 import React from 'react'
 import { BlocklyWorkspace } from "react-blockly";
+import * as Fr from 'blockly/msg/fr';
 
 import ConfigFiles from "./toolbox/content";
 
 import './Blockly.css'
+Blockly.setLocale(Fr)
 
 type BlocklyProps = {
   theme : string,
