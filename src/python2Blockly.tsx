@@ -11,6 +11,28 @@ interface ASTNode {
   value: string
 }
 
+
+function containsVariable(root: ASTNode | undefined, name: string | undefined): boolean {
+  if (root === undefined || name === undefined) return false
+  // Vérifier si le nœud actuel correspond au critère
+  if (root.type === "VariableName" && root.value === name) {
+    return true;
+  }
+
+  // Si le nœud a des enfants, parcourir chacun d'eux récursivement
+  if (root.children) {
+    for (const child of root.children) {
+      // Si l'un des enfants (ou leurs enfants, etc.) correspond, renvoyer true
+      if (containsVariable(child, name)) {
+        return true;
+      }
+    }
+  }
+
+  // Si aucun nœud correspondant n'a été trouvé, renvoyer false
+  return false;
+}
+
 export const parseInput = (code : string) : string => {
   const tree = PythonParser.parse(code);
   if (tree) {
@@ -406,8 +428,28 @@ function mapNodeToBlockly(node: ASTNode, vars: Vars, id: number, create_expr : b
     }
     case "ForStatement": {
       if (node.children?.at(0)?.type === 'for' && node.children?.at(2)?.type === 'in') {
+        const list_operator = node.children?.at(3)?.children?.at(0)?.value
         // create new loop var
         const loop_var = node.children?.at(1)?.value
+        if(list_operator === 'range' && !containsVariable(node.children.at(4), loop_var)) {
+          const list_variable_node = node.children?.at(3)?.children?.at(1)?.children
+          if (list_variable_node === undefined) throw new Error("Invalid for in statement")
+          const [ list_var_block, new_vars2, new_id ] = foldChildren(list_variable_node.filter(n => !(['(',')'].includes(n.type))), vars, id + 2)
+          // fold children
+          const [ blocks, new_vars3, new_id2 ] = foldChildren(node.children.at(4)?.children, new_vars2, new_id, false)
+          return [ [{
+            type: "controls_repeat_ext",
+            id: "nid_" + (id + 1),
+            inputs: {
+              TIMES: {
+                shadow: list_var_block[0][0]
+              },
+              DO: {
+                block: foldChildrenAsNext(blocks.slice(1).flat())
+              }
+            },
+          }], new_vars3, new_id2]
+        }
         const loop_var_id = "nid_" + id
         if (loop_var === undefined) throw new Error("Invalid for in statement")
         const new_vars = vars.concat([[ loop_var, id ]])

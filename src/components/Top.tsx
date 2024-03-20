@@ -62,7 +62,7 @@ export const Header = ({ theme , toggleTheme } : HeaderProps) => {
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Capytale Demo
+          France-ioi - Démo Bockly &lt;&gt; Python
         </Typography>
         <UISwitch
           checked={theme !== 'dark'}
